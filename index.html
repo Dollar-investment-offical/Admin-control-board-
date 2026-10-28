@@ -61,7 +61,7 @@
 
   <!-- SECTION 1: LIVE APP SUPPORT CHAT -->
   <h2>
-    <span>1. Live App Support Chat Center</span>
+    <span>1. Support Live Chat Center</span>
     <div>
       <input type="checkbox" id="selectAllChats" onclick="toggleSelectAll('chat-check', this.checked)">
       <label for="selectAllChats" style="font-size:12px; color:var(--text-muted); font-weight:600; margin-right:8px;">Select All</label>
@@ -86,7 +86,7 @@
     </div>
   </div>
 
-  <!-- SECTION 2: COMMUNITY CHAT STREAM (MONITORING 50+ MSGS/MIN) -->
+  <!-- SECTION 2: COMMUNITY CHAT STREAM -->
   <h2 style="color: var(--accent-purple);">
     <span>💬 Global Community Live Stream (Auto 50 msgs/min & 10-Min Clean Up)</span>
   </h2>
@@ -285,7 +285,7 @@
 
           let amtDisplay = `$${req.amount.toFixed(2)}`;
           if(req.grossAmount) {
-            amtDisplay = `Gross: $${req.grossAmount.toFixed(2)} | <b style="color:var(--accent-green)">Net: $${req.amount.toFixed(2)}</b> (9% Fee Deducted)`;
+            amtDisplay = `Gross: $${req.grossAmount.toFixed(2)} | <b style="color:var(--accent-green)">Net: $${req.amount.toFixed(2)}</b>`;
           }
 
           let walletNetHtml = req.walletAddress ? `<b>Network:</b> <span style="color:var(--accent-yellow); font-weight:800;">${req.network || 'TRC20'}</span><br><b>Address:</b> <span style="font-family:monospace; color:var(--accent-green);">${req.walletAddress}</span>` : 'N/A';
@@ -300,8 +300,8 @@
             <td><span class="badge ${badgeClass}">${req.status}</span></td>
             <td>
               ${req.status === 'Processing' ? `
-                <button class="btn-acc" onclick="updateRequestStatus('${reqId}', 'Success', '${req.userId}', '${req.type}', ${req.amount})">Accept</button>
-                <button class="btn-rej" onclick="updateRequestStatus('${reqId}', 'Rejected', '${req.userId}', '${req.type}', ${req.amount})">Reject</button>
+                <button class="btn-acc" onclick="updateRequestStatus('${reqId}', 'Success', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Accept</button>
+                <button class="btn-rej" onclick="updateRequestStatus('${reqId}', 'Rejected', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Reject</button>
               ` : 'Done'}
             </td>
           </tr>`;
@@ -310,7 +310,7 @@
       });
     }
 
-    async function updateRequestStatus(reqId, newStatus, userId, type, netAmount) {
+    async function updateRequestStatus(reqId, newStatus, userId, type, netAmount, grossAmount) {
       try {
         await db.collection('requests').doc(reqId).update({ status: newStatus });
 
@@ -354,14 +354,14 @@
           }
         }
 
-        if(newStatus === 'Success' && type === 'Withdrawal') {
+        // Rejection refund logic: If withdrawal request is rejected, add the gross requested amount back to user's total assets
+        if(newStatus === 'Rejected' && type === 'Withdrawal') {
           const uRef = db.collection('users').doc(userId);
           const uDoc = await uRef.get();
           if(uDoc.exists) {
             let curBal = uDoc.data().balance || 0;
-            if(curBal >= netAmount) {
-              await uRef.update({ balance: curBal - netAmount });
-            }
+            let refundAmount = grossAmount || netAmount; 
+            await uRef.update({ balance: curBal + refundAmount });
           }
         }
 
