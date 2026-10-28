@@ -347,7 +347,7 @@
                   amount: Number(commission),
                   walletAddress: 'N/A',
                   status: 'Success',
-                  createdAt: new Date()
+                  createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
               }
             }
@@ -415,7 +415,11 @@
       db.collection('chats').where('userId', '==', uid).onSnapshot(snapshot => {
         let msgs = [];
         snapshot.forEach(doc => msgs.push({ id: doc.id, ...doc.data() }));
-        msgs.sort((a,b) => (a.createdAt && b.createdAt) ? a.createdAt.seconds - b.createdAt.seconds : 0);
+        msgs.sort((a,b) => {
+          let tA = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+          let tB = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+          return tA - tB;
+        });
 
         let chatHtml = "";
         msgs.forEach(m => {
@@ -456,7 +460,7 @@
         sender: 'Admin',
         text: txt || '',
         adminRead: true,
-        createdAt: new Date()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
       if(fileData) {
@@ -490,7 +494,11 @@
       db.collection('community_chats').onSnapshot(snapshot => {
         let msgs = [];
         snapshot.forEach(doc => msgs.push(doc.data()));
-        msgs.sort((a,b) => (b.createdAt && a.createdAt) ? a.createdAt.seconds - b.createdAt.seconds : 0);
+        msgs.sort((a,b) => {
+          let tA = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+          let tB = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+          return tB - tA;
+        });
 
         let html = "";
         msgs.forEach(m => {
@@ -520,7 +528,7 @@
       await db.collection('announcements').add({
         text: text,
         imageUrl: announcementImgBase64 || null,
-        createdAt: new Date()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
       document.getElementById('announceText').value = '';
@@ -545,7 +553,7 @@
 
       await db.collection('app_settings').doc('user_guide').set({
         videoUrl: url,
-        updatedAt: new Date()
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
       alert("User Guide Video updated successfully for all users!");
