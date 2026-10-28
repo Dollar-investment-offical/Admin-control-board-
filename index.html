@@ -227,8 +227,8 @@
           let kycImgsHtml = '<span style="color:var(--text-muted); font-size:11px;">No Docs</span>';
           if(u.kycImages) {
             kycImgsHtml = '';
-            if(u.kycImages.front) kycImgsHtml += `<a href="${u.kycImages.front}" target="_blank"><img src="${u.kycImages.front}" class="kyc-thumb" title="Front"/></a>`;
-            if(u.kycImages.back) kycImgsHtml += `<a href="${u.kycImages.back}" target="_blank"><img src="${u.kycImages.back}" class="kyc-thumb" title="Back"/></a>`;
+            if(u.kycImages.front) kycImgsHtml += `<a href="${u.kycImages.front}" target="_blank"><img src="${u.kycImages.front}" class="kyc-thumb" title="Front ID"/></a>`;
+            if(u.kycImages.back) kycImgsHtml += `<a href="${u.kycImages.back}" target="_blank"><img src="${u.kycImages.back}" class="kyc-thumb" title="Back ID"/></a>`;
             if(u.kycImages.selfie) kycImgsHtml += `<a href="${u.kycImages.selfie}" target="_blank"><img src="${u.kycImages.selfie}" class="kyc-thumb" title="Selfie"/></a>`;
           }
 
@@ -354,7 +354,6 @@
           }
         }
 
-        // Rejection refund logic: If withdrawal request is rejected, add the gross requested amount back to user's total assets
         if(newStatus === 'Rejected' && type === 'Withdrawal') {
           const uRef = db.collection('users').doc(userId);
           const uDoc = await uRef.get();
@@ -491,7 +490,7 @@
       db.collection('community_chats').onSnapshot(snapshot => {
         let msgs = [];
         snapshot.forEach(doc => msgs.push(doc.data()));
-        msgs.sort((a,b) => (b.createdAt && a.createdAt) ? b.createdAt.seconds - a.createdAt.seconds : 0);
+        msgs.sort((a,b) => (b.createdAt && a.createdAt) ? a.createdAt.seconds - b.createdAt.seconds : 0);
 
         let html = "";
         msgs.forEach(m => {
