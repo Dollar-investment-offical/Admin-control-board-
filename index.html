@@ -62,7 +62,7 @@
 </head>
 <body>
 
-  <h1>Admin Master Control Board (Direct ID Sync Fix)</h1>
+  <h1>Admin Master Control Board (GitHub Sync Ready)</h1>
   <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Professional management of users, live requests, interactive chats, total asset balances, and announcements.</p>
 
   <!-- SECTION 1: LIVE APP SUPPORT CHAT WITH NEW JOINER IDs -->
@@ -366,7 +366,7 @@
 
       targetReq.status = newStatus;
 
-      // FIXED: Strictly target the user using exact userId from the request object
+      // Ensure exact targeting by ID
       let targetUser = users.find(u => u.id === userId || u.id === targetReq.userId);
 
       // DEPOSIT ACCEPTED -> ADD NET AMOUNT TO USER BALANCE
