@@ -4,6 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Control Board - Dollar Investment</title>
+
+  <!-- Firebase App & Firestore SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5oJWpqCwjvdW_PwPL80bfYyeIFWl4tg4",
+      authDomain: "dollar-investment-28635.firebaseapp.com",
+      projectId: "dollar-investment-28635",
+      storageBucket: "dollar-investment-28635.firebasestorage.app",
+      messagingSenderId: "668549100555",
+      appId: "1:668549100555:web:a58bdbac32887c0498830e",
+      measurementId: "G-XSYDGFW2E2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+
   <style>
     :root {
       --bg-dark: #070b12;
@@ -62,7 +80,7 @@
 </head>
 <body>
 
-  <h1>Admin Master Control Board (GitHub Sync Ready)</h1>
+  <h1>Admin Master Control Board (Telegram & Realtime Sync)</h1>
   <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Professional management of users, live requests, interactive chats, total asset balances, and announcements.</p>
 
   <!-- SECTION 1: LIVE APP SUPPORT CHAT WITH NEW JOINER IDs -->
@@ -143,7 +161,7 @@
 
   <!-- SECTION 4: LIVE REQUESTS -->
   <h2>
-    <span>3. Live Requests (Deposit & Withdrawal Processing with Auto-Refund on Rejection)</span>
+    <span>3. Live Requests (Deposit & Withdrawal Processing with Telegram & Auto-Refund)</span>
     <div>
       <input type="checkbox" id="selectAllRequests" onclick="toggleSelectAll('req-check', this.checked)">
       <label for="selectAllRequests" style="font-size:12px; color:var(--text-muted); font-weight:600; margin-right:8px;">Select All</label>
@@ -180,41 +198,85 @@
   </div>
 
   <script>
+    // === TELEGRAM CONFIGURATION ===
+    const TELEGRAM_BOT_TOKEN = "9231428840:AAHuvy8KlyRDqn3eSH6TYtObmGHeHG2JaRc"; 
+    const TELEGRAM_CHAT_ID = "6766009584";           
+
+    function sendTelegramNotification(messageText) {
+      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: messageText,
+          parse_mode: 'HTML'
+        })
+      }).catch(err => console.error("Telegram notification failed:", err));
+    }
+
     let selectedChatUserId = null;
     let selectedChatUserContact = null;
     let announcementImgBase64 = null;
+    let cachedUsers = [];
+    let cachedRequests = [];
+    let cachedChats = [];
 
     function toggleSelectAll(className, isChecked) {
       document.querySelectorAll(`.${className}`).forEach(cb => cb.checked = isChecked);
     }
 
-    function loadAdminUsers() {
-      let allusers = JSON.parse(localStorage.getItem('app_users') || '[]');
-      let allreqs = JSON.parse(localStorage.getItem('app_requests') || '[]');
-      allusers.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // REAL-TIME FIRESTORE LISTENERS FOR ADMIN PANEL
+    function initAdminRealtimeListeners() {
+      // 1. Listen Users
+      db.collection('app_users').onSnapshot(snapshot => {
+        cachedUsers = [];
+        snapshot.forEach(doc => cachedUsers.push({ docId: doc.id, ...doc.data() }));
+        renderAdminUsers();
+      });
+
+      // 2. Listen Requests
+      db.collection('app_requests').onSnapshot(snapshot => {
+        cachedRequests = [];
+        snapshot.forEach(doc => cachedRequests.push({ docId: doc.id, ...doc.data() }));
+        renderAdminRequests();
+        renderAdminUsers();
+      });
+
+      // 3. Listen Chats
+      db.collection('app_chats').onSnapshot(snapshot => {
+        cachedChats = [];
+        snapshot.forEach(doc => cachedChats.push({ docId: doc.id, ...doc.data() }));
+        renderAdminChatList();
+        if(selectedChatUserId) renderAdminChatMsgs();
+      });
+    }
+
+    function renderAdminUsers() {
+      cachedUsers.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
       let rows = "";
-      allusers.forEach(u => {
-        let userReqs = allreqs.filter(r => r.userId === u.id);
+      cachedUsers.forEach(u => {
+        let userReqs = cachedRequests.filter(r => r.userId === u.id);
         let deposits = userReqs.filter(r => r.type === 'Deposit' && r.status === 'Success');
         let totalDepAmt = deposits.reduce((sum, r) => sum + Number(r.amount || 0), 0);
         let withdrawals = userReqs.filter(r => r.type === 'Withdrawal' && r.status === 'Success');
         let totalWdAmt = withdrawals.reduce((sum, r) => sum + Number(r.grossAmount || r.amount || 0), 0);
 
         let blockStatusBtn = u.isBlocked ? 
-          `<button class="btn-action" style="background:var(--accent-red); color:#fff;" onclick="toggleBlockUser('${u.id}', false)">Unblock</button>` : 
-          `<button class="btn-action" onclick="toggleBlockUser('${u.id}', true)">Block</button>`;
+          `<button class="btn-action" style="background:var(--accent-red); color:#fff;" onclick="toggleBlockUser('${u.docId}', false)">Unblock</button>` : 
+          `<button class="btn-action" onclick="toggleBlockUser('${u.docId}', true)">Block</button>`;
 
         rows += `<tr>
-          <td><input type="checkbox" class="user-check" value="${u.id}"/></td>
+          <td><input type="checkbox" class="user-check" value="${u.docId}"/></td>
           <td><b>${u.name || 'User'}</b><br><span style="font-size:11px; color:var(--text-muted);">${u.contact || 'N/A'}</span><br><span style="font-size:10px; color:var(--accent-cyan);">ID: ${u.myReferralCode || 'N/A'}</span></td>
           <td>
             <div style="display:flex; flex-direction:column; gap:4px;">
               <b style="color:var(--accent-cyan);">$${Number(u.balance || 0).toFixed(2)} USDT</b>
               <div style="display:flex; gap:4px; align-items:center;">
-                <input type="number" id="custBal_${u.id}" value="${Number(u.balance || 0).toFixed(2)}" style="width:80px; padding:4px; background:#000; color:#fff; border:1px solid #333; border-radius:4px;">
-                <button class="btn-action" style="background:var(--accent-green); color:#000;" onclick="saveCustomerBalance('${u.id}')">Set</button>
-                <button class="btn-action" style="background:var(--accent-yellow); color:#000;" onclick="adjustCustomerBalance('${u.id}', 0)">Hold/Zero</button>
+                <input type="number" id="custBal_${u.docId}" value="${Number(u.balance || 0).toFixed(2)}" style="width:80px; padding:4px; background:#000; color:#fff; border:1px solid #333; border-radius:4px;">
+                <button class="btn-action" style="background:var(--accent-green); color:#000;" onclick="saveCustomerBalance('${u.docId}')">Set</button>
+                <button class="btn-action" style="background:var(--accent-yellow); color:#000;" onclick="adjustCustomerBalance('${u.docId}', 0)">Hold/Zero</button>
               </div>
             </div>
           </td>
@@ -222,20 +284,19 @@
           <td><b>Total:</b> $${totalWdAmt.toFixed(2)} (${withdrawals.length} times)</td>
           <td><b>Team Size:</b> 0<br><b>Team Asset:</b> $0.00<br><b>Today Profit:</b> $${Number(u.todayOrderProfit || 0).toFixed(2)}</td>
           <td>
-            <button class="btn-action" style="background:var(--accent-purple); color:#fff; font-size:16px; padding:6px 10px;" onclick="openDigitalModal('${u.id}')" title="View Digital Record">💠</button>
+            <button class="btn-action" style="background:var(--accent-purple); color:#fff; font-size:16px; padding:6px 10px;" onclick="openDigitalModal('${u.docId}')" title="View Digital Record">💠</button>
           </td>
           <td>
             ${blockStatusBtn}
-            <button class="btn-rej" style="padding:4px 8px; font-size:11px;" onclick="deleteUserAccount('${u.id}')">Delete ID</button>
+            <button class="btn-rej" style="padding:4px 8px; font-size:11px;" onclick="deleteUserAccount('${u.docId}')">Delete ID</button>
           </td>
         </tr>`;
       });
       document.getElementById('adminUsersTable').innerHTML = rows || '<tr><td colspan="8" style="text-align:center;">No users registered yet.</td></tr>';
     }
 
-    function openDigitalModal(userId) {
-      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
-      let u = users.find(x => x.id === userId);
+    function openDigitalModal(docId) {
+      let u = cachedUsers.find(x => x.docId === docId);
       if(!u) return;
 
       let regDate = u.createdAt ? new Date(u.createdAt).toLocaleString() : 'N/A';
@@ -252,8 +313,8 @@
         <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
           <h4 style="font-size:14px; color:var(--accent-cyan); margin-bottom:8px;">🛠️ Manual Asset Add / Manage Button</h4>
           <div style="display:flex; gap:8px;">
-            <input type="number" id="manualAddAmt_${u.id}" placeholder="Enter amount ($)" style="flex:1; padding:8px; background:#000; color:#fff; border:1px solid #333; border-radius:6px;">
-            <button class="btn-acc" onclick="manualAddUserAsset('${u.id}')">Add Amount</button>
+            <input type="number" id="manualAddAmt_${u.docId}" placeholder="Enter amount ($)" style="flex:1; padding:8px; background:#000; color:#fff; border:1px solid #333; border-radius:6px;">
+            <button class="btn-acc" onclick="manualAddUserAsset('${u.docId}')">Add Amount</button>
           </div>
         </div>
       `;
@@ -265,72 +326,58 @@
       document.getElementById('digitalModal').classList.remove('active');
     }
 
-    function manualAddUserAsset(userId) {
-      let addVal = parseFloat(document.getElementById(`manualAddAmt_${userId}`).value) || 0;
+    async function manualAddUserAsset(docId) {
+      let addVal = parseFloat(document.getElementById(`manualAddAmt_${docId}`).value) || 0;
       if(addVal <= 0) { alert("Please enter a valid amount to add."); return; }
 
-      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
-      users = users.map(u => {
-        if(u.id === userId) {
-          return {...u, balance: Math.round(((Number(u.balance || 0)) + addVal) * 100) / 100};
-        }
-        return u;
-      });
-      localStorage.setItem('app_users', JSON.stringify(users));
-      loadAdminUsers();
+      let u = cachedUsers.find(x => x.docId === docId);
+      if(!u) return;
+      let newBal = Math.round(((Number(u.balance || 0)) + addVal) * 100) / 100;
+
+      await db.collection('app_users').doc(docId).update({ balance: newBal });
+      
+      sendTelegramNotification(`<b>💰 MANUAL BALANCE ADDED!</b>\n\n<b>User:</b> ${u.name}\n<b>Added:</b> $${addVal.toFixed(2)} USDT\n<b>New Balance:</b> $${newBal.toFixed(2)} USDT`);
+
       alert(`Successfully added $${addVal.toFixed(2)} USDT to user's asset balance!`);
       closeDigitalModal();
     }
 
-    function saveCustomerBalance(userId) {
-      let val = parseFloat(document.getElementById(`custBal_${userId}`).value) || 0;
-      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
-      users = users.map(u => u.id === userId ? {...u, balance: val} : u);
-      localStorage.setItem('app_users', JSON.stringify(users));
-      loadAdminUsers();
+    async function saveCustomerBalance(docId) {
+      let val = parseFloat(document.getElementById(`custBal_${docId}`).value) || 0;
+      await db.collection('app_users').doc(docId).update({ balance: val });
       alert(`Customer Total Asset Balance updated to $${val.toFixed(2)} USDT!`);
     }
 
-    function adjustCustomerBalance(userId, newAmt) {
-      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
-      users = users.map(u => u.id === userId ? {...u, balance: newAmt} : u);
-      localStorage.setItem('app_users', JSON.stringify(users));
-      loadAdminUsers();
+    async function adjustCustomerBalance(docId, newAmt) {
+      await db.collection('app_users').doc(docId).update({ balance: newAmt });
       alert("Customer Total Asset Balance held/set to 0.00 USDT!");
     }
 
-    function toggleBlockUser(userId, blockState) {
-      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
-      users = users.map(u => u.id === userId ? {...u, isBlocked: blockState} : u);
-      localStorage.setItem('app_users', JSON.stringify(users));
-      loadAdminUsers();
+    async function toggleBlockUser(docId, blockState) {
+      await db.collection('app_users').doc(docId).update({ isBlocked: blockState });
     }
 
-    function deleteUserAccount(userId) {
+    async function deleteUserAccount(docId) {
       if(confirm("Are you sure you want to permanently delete this user ID?")) {
-        let users = JSON.parse(localStorage.getItem('app_users') || '[]');
-        users = users.filter(u => u.id !== userId);
-        localStorage.setItem('app_users', JSON.stringify(users));
-        loadAdminUsers();
+        await db.collection('app_users').doc(docId).delete();
       }
     }
 
-    function bulkDeleteSelectedUsers() {
+    async function bulkDeleteSelectedUsers() {
       const selected = Array.from(document.querySelectorAll('.user-check:checked')).map(cb => cb.value);
       if(selected.length === 0) { alert("Please select users to delete!"); return; }
       if(confirm(`Delete ${selected.length} selected users?`)) {
-        let users = JSON.parse(localStorage.getItem('app_users') || '[]').filter(u => !selected.includes(u.id));
-        localStorage.setItem('app_users', JSON.stringify(users));
-        loadAdminUsers();
+        for(let docId of selected) {
+          await db.collection('app_users').doc(docId).delete();
+        }
       }
     }
 
-    function loadAdminRequests() {
-      let reqs = JSON.parse(localStorage.getItem('app_requests') || '[]');
-      reqs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    function renderAdminRequests() {
+      cachedRequests.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
       let rows = "";
-      reqs.forEach(req => {
+      cachedRequests.forEach(req => {
         let badgeClass = req.status === 'Success' ? 'badge-success' : (req.status === 'Rejected' ? 'badge-rejected' : 'badge-processing');
         let amtDisplay = `$${Number(req.amount || 0).toFixed(2)}`;
         if(req.grossAmount) {
@@ -339,7 +386,7 @@
         let walletNetHtml = req.walletAddress ? `<b>Network:</b> <span style="color:var(--accent-yellow); font-weight:800;">${req.network || 'TRC20'}</span><br><b>Address:</b> <span style="font-family:monospace; color:var(--accent-green);">${req.walletAddress}</span>` : 'N/A';
 
         rows += `<tr>
-          <td><input type="checkbox" class="req-check" value="${req.id}"/></td>
+          <td><input type="checkbox" class="req-check" value="${req.docId}"/></td>
           <td><b>${req.userName || 'User'}</b></td>
           <td>${req.userContact || 'N/A'}</td>
           <td><b>${req.type}</b></td>
@@ -348,8 +395,8 @@
           <td><span class="badge ${badgeClass}">${req.status}</span></td>
           <td>
             ${req.status === 'Processing' ? `
-              <button class="btn-acc" onclick="updateRequestStatus('${req.id}', 'Success', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Accept</button>
-              <button class="btn-rej" onclick="updateRequestStatus('${req.id}', 'Rejected', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Reject</button>
+              <button class="btn-acc" onclick="updateRequestStatus('${req.docId}', 'Success', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Accept</button>
+              <button class="btn-rej" onclick="updateRequestStatus('${req.docId}', 'Rejected', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Reject</button>
             ` : 'Done'}
           </td>
         </tr>`;
@@ -357,64 +404,51 @@
       document.getElementById('adminRequestsTable').innerHTML = rows || '<tr><td colspan="8" style="text-align:center;">No requests found.</td></tr>';
     }
 
-    function updateRequestStatus(reqId, newStatus, userId, type, netAmount, grossAmount) {
-      let reqs = JSON.parse(localStorage.getItem('app_requests') || '[]');
-      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
-
-      let targetReq = reqs.find(r => r.id === reqId);
+    async function updateRequestStatus(docId, newStatus, userId, type, netAmount, grossAmount) {
+      let targetReq = cachedRequests.find(r => r.docId === docId);
       if(!targetReq) return;
 
-      targetReq.status = newStatus;
+      let targetUser = cachedUsers.find(u => u.id === userId || u.docId === userId);
 
-      // Ensure exact targeting by ID
-      let targetUser = users.find(u => u.id === userId || u.id === targetReq.userId);
-
-      // DEPOSIT ACCEPTED -> ADD NET AMOUNT TO USER BALANCE
-      if(newStatus === 'Success' && type === 'Deposit') {
+      if(newStatus === 'Success' && type === 'Deposit' && targetUser) {
         let netToAdd = Number(netAmount);
-        if(targetUser) {
-          targetUser.balance = Math.round(((Number(targetUser.balance || 0)) + netToAdd) * 100) / 100;
-          targetUser.deposit = Math.round(((Number(targetUser.deposit || 0)) + netToAdd) * 100) / 100;
-          targetUser.creditedDeposit = Math.round(((Number(targetUser.creditedDeposit || 0)) + netToAdd) * 100) / 100;
-        }
+        let newBal = Math.round(((Number(targetUser.balance || 0)) + netToAdd) * 100) / 100;
+        let newDep = Math.round(((Number(targetUser.deposit || 0)) + netToAdd) * 100) / 100;
+        await db.collection('app_users').doc(targetUser.docId).update({ balance: newBal, deposit: newDep });
+        
+        sendTelegramNotification(`<b>✅ DEPOSIT APPROVED!</b>\n\n<b>User:</b> ${targetUser.name}\n<b>Amount:</b> $${netToAdd.toFixed(2)} USDT`);
       }
 
-      // WITHDRAWAL REJECTED -> REFUND GROSS/REQUESTED AMOUNT BACK TO USER BALANCE
-      if(newStatus === 'Rejected' && type === 'Withdrawal') {
+      if(newStatus === 'Rejected' && type === 'Withdrawal' && targetUser) {
         let refundAmount = Number(grossAmount || targetReq.grossAmount || targetReq.amount || 0);
-        if(targetUser) {
-          targetUser.balance = Math.round(((Number(targetUser.balance || 0)) + refundAmount) * 100) / 100;
-        }
+        let newBal = Math.round(((Number(targetUser.balance || 0)) + refundAmount) * 100) / 100;
+        await db.collection('app_users').doc(targetUser.docId).update({ balance: newBal });
+
+        sendTelegramNotification(`<b>❌ WITHDRAWAL REJECTED & REFUNDED!</b>\n\n<b>User:</b> ${targetUser.name}\n<b>Refunded Amount:</b> $${refundAmount.toFixed(2)} USDT`);
       }
 
-      localStorage.setItem('app_users', JSON.stringify(users));
-      localStorage.setItem('app_requests', JSON.stringify(reqs));
-      
-      loadAdminRequests();
-      loadAdminUsers();
+      await db.collection('app_requests').doc(docId).update({ status: newStatus });
       alert(`Request marked as ${newStatus}! User balance updated successfully.`);
     }
 
-    function bulkDeleteSelectedRequests() {
+    async function bulkDeleteSelectedRequests() {
       const selected = Array.from(document.querySelectorAll('.req-check:checked')).map(cb => cb.value);
       if(selected.length === 0) { alert("Please select requests to delete!"); return; }
       if(confirm(`Delete ${selected.length} selected requests?`)) {
-        let reqs = JSON.parse(localStorage.getItem('app_requests') || '[]').filter(r => !selected.includes(r.id));
-        localStorage.setItem('app_requests', JSON.stringify(reqs));
-        loadAdminRequests();
+        for(let docId of selected) {
+          await db.collection('app_requests').doc(docId).delete();
+        }
       }
     }
 
-    function loadAdminChatList() {
-      let chats = JSON.parse(localStorage.getItem('app_chats') || '[]');
-      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+    function renderAdminChatList() {
       let usersMap = {};
 
-      users.forEach(u => {
+      cachedUsers.forEach(u => {
         usersMap[u.id] = { name: `${u.name || u.contact} (ID: ${u.myReferralCode || u.id})`, unread: 0 };
       });
 
-      chats.forEach(c => {
+      cachedChats.forEach(c => {
         if(!usersMap[c.userId]) {
           usersMap[c.userId] = { name: `${c.userName || c.userContact} (ID: ${c.userId})`, unread: 0 };
         }
@@ -436,22 +470,22 @@
       document.getElementById('adminUserChatList').innerHTML = html || '<div style="padding:12px; color:var(--text-muted);">No support chats active.</div>';
     }
 
-    function selectUserChat(uid, contact) {
+    async function selectUserChat(uid, contact) {
       selectedChatUserId = uid;
       selectedChatUserContact = contact;
       document.getElementById('selectedChatTitle').innerText = `Chatting with User: ${contact}`;
 
-      let chats = JSON.parse(localStorage.getItem('app_chats') || '[]');
-      chats = chats.map(c => c.userId === uid && c.sender === 'User' ? {...c, adminRead: true} : c);
-      localStorage.setItem('app_chats', JSON.stringify(chats));
+      let unreadMsgs = cachedChats.filter(c => c.userId === uid && c.sender === 'User' && !c.adminRead);
+      for(let m of unreadMsgs) {
+        await db.collection('app_chats').doc(m.docId).update({ adminRead: true });
+      }
 
-      loadAdminChatList();
       renderAdminChatMsgs();
     }
 
     function renderAdminChatMsgs() {
       if(!selectedChatUserId) return;
-      let chats = JSON.parse(localStorage.getItem('app_chats') || '[]').filter(c => c.userId === selectedChatUserId);
+      let chats = cachedChats.filter(c => c.userId === selectedChatUserId);
       chats.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
 
       let chatHtml = "";
@@ -467,37 +501,35 @@
         }
         chatHtml += `<div style="${side} margin-bottom:8px;">
           <b>${m.sender}:</b> ${m.text || ''}${fileHtml}
-          <button class="btn-action" style="background:var(--accent-red); color:#fff; font-size:9px; padding:2px 4px; margin-left:6px;" onclick="deleteChatMessage('${m.id}')">Delete Msg</button>
+          <button class="btn-action" style="background:var(--accent-red); color:#fff; font-size:9px; padding:2px 4px; margin-left:6px;" onclick="deleteChatMessage('${m.docId}')">Delete Msg</button>
         </div>`;
       });
       document.getElementById('adminChatMsgs').innerHTML = chatHtml;
     }
 
-    function deleteChatMessage(msgId) {
+    async function deleteChatMessage(docId) {
       if(confirm("Delete this message?")) {
-        let chats = JSON.parse(localStorage.getItem('app_chats') || '[]').filter(c => c.id !== msgId);
-        localStorage.setItem('app_chats', JSON.stringify(chats));
-        renderAdminChatMsgs();
+        await db.collection('app_chats').doc(docId).delete();
       }
     }
 
-    function bulkDeleteSelectedChats() {
+    async function bulkDeleteSelectedChats() {
       const selected = Array.from(document.querySelectorAll('.chat-check:checked')).map(cb => cb.value);
       if(selected.length === 0) { alert("Select chats to delete!"); return; }
       if(confirm(`Delete chats for ${selected.length} selected users?`)) {
-        let chats = JSON.parse(localStorage.getItem('app_chats') || '[]').filter(c => !selected.includes(c.userId));
-        localStorage.setItem('app_chats', JSON.stringify(chats));
-        loadAdminChatList();
+        let chatsToDelete = cachedChats.filter(c => selected.includes(c.userId));
+        for(let c of chatsToDelete) {
+          await db.collection('app_chats').doc(c.docId).delete();
+        }
         document.getElementById('adminChatMsgs').innerHTML = "";
       }
     }
 
-    function sendAdminReply(fileData = null) {
+    async function sendAdminReply(fileData = null) {
       const txt = document.getElementById('adminReplyInput').value.trim();
       if(!txt && !fileData) return;
       if(!selectedChatUserId) return;
 
-      let chats = JSON.parse(localStorage.getItem('app_chats') || '[]');
       let chatObj = {
         id: 'chat_' + Date.now(),
         userId: selectedChatUserId,
@@ -507,19 +539,30 @@
         adminRead: true,
         createdAt: new Date().toISOString()
       };
-      chats.push(chatObj);
-      localStorage.setItem('app_chats', JSON.stringify(chats));
-      document.getElementById('adminReplyInput').value = '';
-      renderAdminChatMsgs();
-      loadAdminChatList();
+
+      try {
+        await db.collection('app_chats').add(chatObj);
+        document.getElementById('adminReplyInput').value = '';
+      } catch(e) { console.error(e); }
     }
 
     function handleAdminFileUpload(e) {
       const file = e.target.files[0];
       if(!file) return;
-      const reader = new FileReader();
+      constReader = new FileReader();
       reader.onload = function(evt) {
-        sendAdminReply({ url: evt.target.result, name: file.name, type: file.type.includes('image') ? 'image' : 'document' });
+        db.collection('app_chats').add({
+          id: 'chat_' + Date.now(),
+          userId: selectedChatUserId,
+          userContact: selectedChatUserContact,
+          sender: 'Admin',
+          text: '',
+          fileUrl: evt.target.result,
+          fileName: file.name,
+          fileType: file.type.includes('image') ? 'image' : 'document',
+          adminRead: true,
+          createdAt: new Date().toISOString()
+        });
         alert("File sent to user!");
       };
       reader.readAsDataURL(file);
@@ -534,22 +577,22 @@
       }
     }
 
-    function publishAnnouncement() {
+    async function publishAnnouncement() {
       const text = document.getElementById('announceText').value.trim();
       if(!text && !announcementImgBase64) { alert("Please enter text or select an image!"); return; }
 
-      let items = JSON.parse(localStorage.getItem('app_announcements') || '[]');
-      items.push({
-        id: 'ann_' + Date.now(),
-        text: text,
-        imageUrl: announcementImgBase64 || null,
-        createdAt: new Date().toISOString()
-      });
-      localStorage.setItem('app_announcements', JSON.stringify(items));
+      try {
+        await db.collection('app_announcements').add({
+          id: 'ann_' + Date.now(),
+          text: text,
+          imageUrl: announcementImgBase64 || null,
+          createdAt: new Date().toISOString()
+        });
 
-      document.getElementById('announceText').value = '';
-      announcementImgBase64 = null;
-      alert("Announcement published successfully to all users!");
+        document.getElementById('announceText').value = '';
+        announcementImgBase64 = null;
+        alert("Announcement published successfully to all users!");
+      } catch(e) { console.error(e); }
     }
 
     function handleGuideVideoUpload(e) {
@@ -563,25 +606,21 @@
       }
     }
 
-    function saveGuideVideoUrl() {
+    async function saveGuideVideoUrl() {
       const url = document.getElementById('guideVideoUrlInput').value.trim();
       if(!url) { alert("Please provide video URL or file!"); return; }
 
-      localStorage.setItem('app_guide', JSON.stringify({ videoUrl: url, updatedAt: new Date().toISOString() }));
-      alert("User Guide Video updated successfully for all users!");
+      try {
+        await db.collection('app_guide').doc('latest').set({
+          videoUrl: url,
+          updatedAt: new Date().toISOString()
+        });
+        alert("User Guide Video updated successfully for all users!");
+      } catch(e) { console.error(e); }
     }
 
-    setInterval(() => {
-      loadAdminUsers();
-      loadAdminRequests();
-      loadAdminChatList();
-      if(selectedChatUserId) renderAdminChatMsgs();
-    }, 1500);
-
     window.onload = function() {
-      loadAdminUsers();
-      loadAdminRequests();
-      loadAdminChatList();
+      initAdminRealtimeListeners();
     };
   </script>
 </body>
