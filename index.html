@@ -48,24 +48,30 @@
     .chat-in button { padding:10px 16px; background:var(--accent-cyan); border:none; font-weight:800; border-radius:6px; cursor:pointer; color: #000; }
     .chat-file-img { max-width: 150px; border-radius: 6px; margin-top: 4px; display: block; }
     .chat-file-link { color: #00d2ff; text-decoration: underline; font-weight: bold; font-size: 12px; }
-    .kyc-thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; cursor: pointer; border: 1px solid var(--accent-cyan); margin-right: 4px; }
     
     .admin-control-box { background: var(--bg-card); border: 1px solid var(--bg-card-border); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
     .input-field { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333; background: rgba(0,0,0,0.5); color: #fff; margin-bottom: 10px; }
+    
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 5000; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: #111823; border: 2px solid var(--accent-cyan); border-radius: 16px; width: 90%; max-width: 500px; padding: 24px; max-height: 85vh; overflow-y: auto; color: #fff; }
+    .close-modal { float: right; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-weight: 900; cursor: pointer; }
+    .digital-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 13px; }
+    .digital-val { color: var(--accent-green); font-weight: 800; }
   </style>
 </head>
 <body>
 
-  <h1>Admin Master Control Board (Live Realtime)</h1>
-  <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Professional management of users, live requests, interactive chats, community stream, official announcements & video guide.</p>
+  <h1>Admin Master Control Board (Direct ID Sync Fix)</h1>
+  <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Professional management of users, live requests, interactive chats, total asset balances, and announcements.</p>
 
-  <!-- SECTION 1: LIVE APP SUPPORT CHAT -->
+  <!-- SECTION 1: LIVE APP SUPPORT CHAT WITH NEW JOINER IDs -->
   <h2>
-    <span>1. Support Live Chat Center</span>
+    <span>1. Support Live Chat Center (1-on-1 with New Joiners & User IDs)</span>
     <div>
       <input type="checkbox" id="selectAllChats" onclick="toggleSelectAll('chat-check', this.checked)">
       <label for="selectAllChats" style="font-size:12px; color:var(--text-muted); font-weight:600; margin-right:8px;">Select All</label>
-      <button class="btn-bulk-delete" onclick="bulkDeleteSelected('chats', 'chat-check')">Delete Selected Chats</button>
+      <button class="btn-bulk-delete" onclick="bulkDeleteSelectedChats()">Delete Selected Chats</button>
     </div>
   </h2>
   <div class="chat-admin-grid">
@@ -86,15 +92,7 @@
     </div>
   </div>
 
-  <!-- SECTION 2: COMMUNITY CHAT STREAM -->
-  <h2 style="color: var(--accent-purple);">
-    <span>💬 Global Community Live Stream (Auto 50 msgs/min & 10-Min Clean Up)</span>
-  </h2>
-  <div class="admin-control-box">
-    <div id="adminCommunityStream" style="height: 180px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid var(--bg-card-border); border-radius: 8px; padding: 10px; font-size: 12px;"></div>
-  </div>
-
-  <!-- SECTION 3: ADMIN ANNOUNCEMENT & USER GUIDE VIDEO CONTROLLER -->
+  <!-- SECTION 2: ADMIN ANNOUNCEMENT & USER GUIDE VIDEO CONTROLLER -->
   <h2><span>📢 Admin Announcement & 🎥 User Guide Video Upload</span></h2>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
     <!-- Announcement Publisher -->
@@ -114,13 +112,13 @@
     </div>
   </div>
 
-  <!-- SECTION 4: ALL USERS & ASSETS -->
+  <!-- SECTION 3: ALL USERS & BALANCE / HOLD / STATS CONTROL -->
   <h2>
-    <span>2. All Users, Total Assets, KYC Documents & Management Actions</span>
+    <span>2. User Management & Balance Control / Hold Column</span>
     <div>
       <input type="checkbox" id="selectAllUsers" onclick="toggleSelectAll('user-check', this.checked)">
       <label for="selectAllUsers" style="font-size:12px; color:var(--text-muted); font-weight:600; margin-right:8px;">Select All</label>
-      <button class="btn-bulk-delete" onclick="bulkDeleteSelected('users', 'user-check')">Delete Selected Users</button>
+      <button class="btn-bulk-delete" onclick="bulkDeleteSelectedUsers()">Delete Selected Users</button>
     </div>
   </h2>
   <div class="table-container">
@@ -128,27 +126,28 @@
       <thead>
         <tr>
           <th><input type="checkbox" disabled></th>
-          <th>User Name & Contact</th>
-          <th>Referral Code</th>
-          <th>Total Asset Balance ($)</th>
-          <th>Net Deposit ($)</th>
-          <th>KYC Documents</th>
-          <th>Status / Actions</th>
+          <th>User Info & ID</th>
+          <th>Total Asset / Hold Balance ($)</th>
+          <th>Deposit Stats</th>
+          <th>Withdrawal Stats</th>
+          <th>Team Stats & Earnings</th>
+          <th>Digital Icon</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="adminUsersTable">
-        <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading users data...</td></tr>
+        <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading users data...</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- SECTION 5: LIVE REQUESTS -->
+  <!-- SECTION 4: LIVE REQUESTS -->
   <h2>
-    <span>3. Live Requests (Net 9% Deducted Amount Processing & Network details)</span>
+    <span>3. Live Requests (Deposit & Withdrawal Processing with Auto-Refund on Rejection)</span>
     <div>
       <input type="checkbox" id="selectAllRequests" onclick="toggleSelectAll('req-check', this.checked)">
       <label for="selectAllRequests" style="font-size:12px; color:var(--text-muted); font-weight:600; margin-right:8px;">Select All</label>
-      <button class="btn-bulk-delete" onclick="bulkDeleteSelected('requests', 'req-check')">Delete Selected Requests</button>
+      <button class="btn-bulk-delete" onclick="bulkDeleteSelectedRequests()">Delete Selected Requests</button>
     </div>
   </h2>
   <div class="table-container">
@@ -171,24 +170,16 @@
     </table>
   </div>
 
-  <!-- FIREBASE ENGINE INTEGRATION -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <!-- DIGITAL ICON MODAL POPUP -->
+  <div id="digitalModal" class="modal-overlay">
+    <div class="modal-card">
+      <button class="close-modal" onclick="closeDigitalModal()">✕</button>
+      <h3 style="color:var(--accent-green); margin-bottom:14px; font-size:16px;">📊 User Digital Record Details</h3>
+      <div id="digitalModalContent"></div>
+    </div>
+  </div>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCK3W-6_eY-CLaUlI1c0T-3kbLabMOIzIw",
-      authDomain: "dollar-investment-56274.firebaseapp.com",
-      projectId: "dollar-investment-56274",
-      storageBucket: "dollar-investment-56274.firebasestorage.app",
-      messagingSenderId: "22201933910",
-      appId: "1:22201933910:web:d7f26555fc9d6bc0465bf7",
-      measurementId: "G-T08WM25ZCM"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
     let selectedChatUserId = null;
     let selectedChatUserContact = null;
     let announcementImgBase64 = null;
@@ -197,319 +188,341 @@
       document.querySelectorAll(`.${className}`).forEach(cb => cb.checked = isChecked);
     }
 
-    async function bulkDeleteSelected(collectionName, className) {
-      const selected = Array.from(document.querySelectorAll(`.${className}:checked`)).map(cb => cb.value);
-      if(selected.length === 0) { alert("Please select items to delete!"); return; }
-
-      if(confirm(`Are you sure you want to delete ${selected.length} selected items from ${collectionName}?`)) {
-        let batch = db.batch();
-        selected.forEach(id => {
-          batch.delete(db.collection(collectionName).doc(id));
-        });
-        await batch.commit();
-        alert("Selected items deleted successfully!");
-      }
-    }
-
     function loadAdminUsers() {
-      db.collection('users').onSnapshot(snapshot => {
-        let allUsers = [];
-        snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
+      let allusers = JSON.parse(localStorage.getItem('app_users') || '[]');
+      let allreqs = JSON.parse(localStorage.getItem('app_requests') || '[]');
+      allusers.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        allUsers.sort((a,b) => {
-          let tA = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
-          let tB = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-          return tB - tA;
-        });
+      let rows = "";
+      allusers.forEach(u => {
+        let userReqs = allreqs.filter(r => r.userId === u.id);
+        let deposits = userReqs.filter(r => r.type === 'Deposit' && r.status === 'Success');
+        let totalDepAmt = deposits.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+        let withdrawals = userReqs.filter(r => r.type === 'Withdrawal' && r.status === 'Success');
+        let totalWdAmt = withdrawals.reduce((sum, r) => sum + Number(r.grossAmount || r.amount || 0), 0);
 
-        let rows = "";
-        allUsers.forEach(u => {
-          let kycImgsHtml = '<span style="color:var(--text-muted); font-size:11px;">No Docs</span>';
-          if(u.kycImages) {
-            kycImgsHtml = '';
-            if(u.kycImages.front) kycImgsHtml += `<a href="${u.kycImages.front}" target="_blank"><img src="${u.kycImages.front}" class="kyc-thumb" title="Front ID"/></a>`;
-            if(u.kycImages.back) kycImgsHtml += `<a href="${u.kycImages.back}" target="_blank"><img src="${u.kycImages.back}" class="kyc-thumb" title="Back ID"/></a>`;
-            if(u.kycImages.selfie) kycImgsHtml += `<a href="${u.kycImages.selfie}" target="_blank"><img src="${u.kycImages.selfie}" class="kyc-thumb" title="Selfie"/></a>`;
-          }
+        let blockStatusBtn = u.isBlocked ? 
+          `<button class="btn-action" style="background:var(--accent-red); color:#fff;" onclick="toggleBlockUser('${u.id}', false)">Unblock</button>` : 
+          `<button class="btn-action" onclick="toggleBlockUser('${u.id}', true)">Block</button>`;
 
-          let blockStatusBtn = u.isBlocked ? 
-            `<button class="btn-action" style="background:var(--accent-red); color:#fff;" onclick="toggleBlockUser('${u.id}', false)">Unblock</button>` : 
-            `<button class="btn-action" onclick="toggleBlockUser('${u.id}', true)">Block</button>`;
-
-          rows += `<tr>
-            <td><input type="checkbox" class="user-check" value="${u.id}"/></td>
-            <td><b>${u.name || 'User'}</b><br><span style="font-size:11px; color:var(--text-muted);">${u.contact || 'N/A'}</span></td>
-            <td><b style="color:var(--accent-green)">${u.myReferralCode || 'N/A'}</b></td>
-            <td><b style="color:var(--accent-cyan);">$${Number(u.balance || 0).toFixed(2)} USDT</b></td>
-            <td>$${Number(u.deposit || 0).toFixed(2)}</td>
-            <td><div style="display:flex;">${kycImgsHtml}</div></td>
-            <td>
-              ${blockStatusBtn}
-              <button class="btn-rej" style="padding:4px 8px; font-size:11px;" onclick="deleteUserAccount('${u.id}')">Delete ID</button>
-            </td>
-          </tr>`;
-        });
-        document.getElementById('adminUsersTable').innerHTML = rows || '<tr><td colspan="7" style="text-align:center;">No users registered yet.</td></tr>';
+        rows += `<tr>
+          <td><input type="checkbox" class="user-check" value="${u.id}"/></td>
+          <td><b>${u.name || 'User'}</b><br><span style="font-size:11px; color:var(--text-muted);">${u.contact || 'N/A'}</span><br><span style="font-size:10px; color:var(--accent-cyan);">ID: ${u.myReferralCode || 'N/A'}</span></td>
+          <td>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <b style="color:var(--accent-cyan);">$${Number(u.balance || 0).toFixed(2)} USDT</b>
+              <div style="display:flex; gap:4px; align-items:center;">
+                <input type="number" id="custBal_${u.id}" value="${Number(u.balance || 0).toFixed(2)}" style="width:80px; padding:4px; background:#000; color:#fff; border:1px solid #333; border-radius:4px;">
+                <button class="btn-action" style="background:var(--accent-green); color:#000;" onclick="saveCustomerBalance('${u.id}')">Set</button>
+                <button class="btn-action" style="background:var(--accent-yellow); color:#000;" onclick="adjustCustomerBalance('${u.id}', 0)">Hold/Zero</button>
+              </div>
+            </div>
+          </td>
+          <td><b>Total:</b> $${totalDepAmt.toFixed(2)} (${deposits.length} times)</td>
+          <td><b>Total:</b> $${totalWdAmt.toFixed(2)} (${withdrawals.length} times)</td>
+          <td><b>Team Size:</b> 0<br><b>Team Asset:</b> $0.00<br><b>Today Profit:</b> $${Number(u.todayOrderProfit || 0).toFixed(2)}</td>
+          <td>
+            <button class="btn-action" style="background:var(--accent-purple); color:#fff; font-size:16px; padding:6px 10px;" onclick="openDigitalModal('${u.id}')" title="View Digital Record">💠</button>
+          </td>
+          <td>
+            ${blockStatusBtn}
+            <button class="btn-rej" style="padding:4px 8px; font-size:11px;" onclick="deleteUserAccount('${u.id}')">Delete ID</button>
+          </td>
+        </tr>`;
       });
+      document.getElementById('adminUsersTable').innerHTML = rows || '<tr><td colspan="8" style="text-align:center;">No users registered yet.</td></tr>';
     }
 
-    async function toggleBlockUser(userId, blockState) {
-      if(confirm(blockState ? "Are you sure you want to block this user ID?" : "Unblock this user ID?")) {
-        await db.collection('users').doc(userId).update({ isBlocked: blockState });
-        alert(blockState ? "User blocked successfully." : "User unblocked successfully.");
+    function openDigitalModal(userId) {
+      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+      let u = users.find(x => x.id === userId);
+      if(!u) return;
+
+      let regDate = u.createdAt ? new Date(u.createdAt).toLocaleString() : 'N/A';
+      let html = `
+        <div class="digital-row"><span>New Joiner ID:</span> <span class="digital-val">${u.myReferralCode || u.id}</span></div>
+        <div class="digital-row"><span>Email / Number:</span> <span class="digital-val">${u.contact || 'N/A'}</span></div>
+        <div class="digital-row"><span>Date & Time Joined:</span> <span class="digital-val">${regDate}</span></div>
+        <div class="digital-row"><span>Team Size:</span> <span class="digital-val">0 Members</span></div>
+        <div class="digital-row"><span>Team Assets:</span> <span class="digital-val">$0.00 USDT</span></div>
+        <div class="digital-row"><span>User Assets (Total Balance):</span> <span class="digital-val">$${Number(u.balance || 0).toFixed(2)} USDT</span></div>
+        <div class="digital-row"><span>User Daily Profit:</span> <span class="digital-val">$${Number(u.todayOrderProfit || 0).toFixed(2)} USDT</span></div>
+        <div class="digital-row"><span>Team Daily Profit:</span> <span class="digital-val">$0.00 USDT</span></div>
+        
+        <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
+          <h4 style="font-size:14px; color:var(--accent-cyan); margin-bottom:8px;">🛠️ Manual Asset Add / Manage Button</h4>
+          <div style="display:flex; gap:8px;">
+            <input type="number" id="manualAddAmt_${u.id}" placeholder="Enter amount ($)" style="flex:1; padding:8px; background:#000; color:#fff; border:1px solid #333; border-radius:6px;">
+            <button class="btn-acc" onclick="manualAddUserAsset('${u.id}')">Add Amount</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('digitalModalContent').innerHTML = html;
+      document.getElementById('digitalModal').classList.add('active');
+    }
+
+    function closeDigitalModal() {
+      document.getElementById('digitalModal').classList.remove('active');
+    }
+
+    function manualAddUserAsset(userId) {
+      let addVal = parseFloat(document.getElementById(`manualAddAmt_${userId}`).value) || 0;
+      if(addVal <= 0) { alert("Please enter a valid amount to add."); return; }
+
+      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+      users = users.map(u => {
+        if(u.id === userId) {
+          return {...u, balance: Math.round(((Number(u.balance || 0)) + addVal) * 100) / 100};
+        }
+        return u;
+      });
+      localStorage.setItem('app_users', JSON.stringify(users));
+      loadAdminUsers();
+      alert(`Successfully added $${addVal.toFixed(2)} USDT to user's asset balance!`);
+      closeDigitalModal();
+    }
+
+    function saveCustomerBalance(userId) {
+      let val = parseFloat(document.getElementById(`custBal_${userId}`).value) || 0;
+      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+      users = users.map(u => u.id === userId ? {...u, balance: val} : u);
+      localStorage.setItem('app_users', JSON.stringify(users));
+      loadAdminUsers();
+      alert(`Customer Total Asset Balance updated to $${val.toFixed(2)} USDT!`);
+    }
+
+    function adjustCustomerBalance(userId, newAmt) {
+      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+      users = users.map(u => u.id === userId ? {...u, balance: newAmt} : u);
+      localStorage.setItem('app_users', JSON.stringify(users));
+      loadAdminUsers();
+      alert("Customer Total Asset Balance held/set to 0.00 USDT!");
+    }
+
+    function toggleBlockUser(userId, blockState) {
+      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+      users = users.map(u => u.id === userId ? {...u, isBlocked: blockState} : u);
+      localStorage.setItem('app_users', JSON.stringify(users));
+      loadAdminUsers();
+    }
+
+    function deleteUserAccount(userId) {
+      if(confirm("Are you sure you want to permanently delete this user ID?")) {
+        let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+        users = users.filter(u => u.id !== userId);
+        localStorage.setItem('app_users', JSON.stringify(users));
+        loadAdminUsers();
       }
     }
 
-    async function deleteUserAccount(userId) {
-      if(confirm("Are you sure you want to permanently delete this user ID and data?")) {
-        await db.collection('users').doc(userId).delete();
-        alert("User account deleted successfully.");
+    function bulkDeleteSelectedUsers() {
+      const selected = Array.from(document.querySelectorAll('.user-check:checked')).map(cb => cb.value);
+      if(selected.length === 0) { alert("Please select users to delete!"); return; }
+      if(confirm(`Delete ${selected.length} selected users?`)) {
+        let users = JSON.parse(localStorage.getItem('app_users') || '[]').filter(u => !selected.includes(u.id));
+        localStorage.setItem('app_users', JSON.stringify(users));
+        loadAdminUsers();
       }
     }
 
     function loadAdminRequests() {
-      db.collection('requests').onSnapshot(snapshot => {
-        let reqs = [];
-        snapshot.forEach(doc => reqs.push({ id: doc.id, ...doc.data() }));
+      let reqs = JSON.parse(localStorage.getItem('app_requests') || '[]');
+      reqs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        reqs.sort((a,b) => {
-          let tA = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
-          let tB = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-          return tB - tA;
-        });
+      let rows = "";
+      reqs.forEach(req => {
+        let badgeClass = req.status === 'Success' ? 'badge-success' : (req.status === 'Rejected' ? 'badge-rejected' : 'badge-processing');
+        let amtDisplay = `$${Number(req.amount || 0).toFixed(2)}`;
+        if(req.grossAmount) {
+          amtDisplay = `Gross: $${Number(req.grossAmount || 0).toFixed(2)} | <b style="color:var(--accent-green)">Net: $${Number(req.amount || 0).toFixed(2)}</b>`;
+        }
+        let walletNetHtml = req.walletAddress ? `<b>Network:</b> <span style="color:var(--accent-yellow); font-weight:800;">${req.network || 'TRC20'}</span><br><b>Address:</b> <span style="font-family:monospace; color:var(--accent-green);">${req.walletAddress}</span>` : 'N/A';
 
-        let rows = "";
-        reqs.forEach(req => {
-          let reqId = req.id;
-          let badgeClass = req.status === 'Success' ? 'badge-success' : (req.status === 'Rejected' ? 'badge-rejected' : 'badge-processing');
-
-          let amtDisplay = `$${req.amount.toFixed(2)}`;
-          if(req.grossAmount) {
-            amtDisplay = `Gross: $${req.grossAmount.toFixed(2)} | <b style="color:var(--accent-green)">Net: $${req.amount.toFixed(2)}</b>`;
-          }
-
-          let walletNetHtml = req.walletAddress ? `<b>Network:</b> <span style="color:var(--accent-yellow); font-weight:800;">${req.network || 'TRC20'}</span><br><b>Address:</b> <span style="font-family:monospace; color:var(--accent-green);">${req.walletAddress}</span>` : 'N/A';
-
-          rows += `<tr>
-            <td><input type="checkbox" class="req-check" value="${reqId}"/></td>
-            <td><b>${req.userName || 'User'}</b></td>
-            <td>${req.userContact || 'N/A'}</td>
-            <td><b>${req.type}</b></td>
-            <td>${amtDisplay}</td>
-            <td>${walletNetHtml}</td>
-            <td><span class="badge ${badgeClass}">${req.status}</span></td>
-            <td>
-              ${req.status === 'Processing' ? `
-                <button class="btn-acc" onclick="updateRequestStatus('${reqId}', 'Success', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Accept</button>
-                <button class="btn-rej" onclick="updateRequestStatus('${reqId}', 'Rejected', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Reject</button>
-              ` : 'Done'}
-            </td>
-          </tr>`;
-        });
-        document.getElementById('adminRequestsTable').innerHTML = rows || '<tr><td colspan="8" style="text-align:center;">No requests found.</td></tr>';
+        rows += `<tr>
+          <td><input type="checkbox" class="req-check" value="${req.id}"/></td>
+          <td><b>${req.userName || 'User'}</b></td>
+          <td>${req.userContact || 'N/A'}</td>
+          <td><b>${req.type}</b></td>
+          <td>${amtDisplay}</td>
+          <td>${walletNetHtml}</td>
+          <td><span class="badge ${badgeClass}">${req.status}</span></td>
+          <td>
+            ${req.status === 'Processing' ? `
+              <button class="btn-acc" onclick="updateRequestStatus('${req.id}', 'Success', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Accept</button>
+              <button class="btn-rej" onclick="updateRequestStatus('${req.id}', 'Rejected', '${req.userId}', '${req.type}', ${req.amount}, ${req.grossAmount || req.amount})">Reject</button>
+            ` : 'Done'}
+          </td>
+        </tr>`;
       });
+      document.getElementById('adminRequestsTable').innerHTML = rows || '<tr><td colspan="8" style="text-align:center;">No requests found.</td></tr>';
     }
 
-    async function updateRequestStatus(reqId, newStatus, userId, type, netAmount, grossAmount) {
-      try {
-        await db.collection('requests').doc(reqId).update({ status: newStatus });
+    function updateRequestStatus(reqId, newStatus, userId, type, netAmount, grossAmount) {
+      let reqs = JSON.parse(localStorage.getItem('app_requests') || '[]');
+      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
 
-        if(newStatus === 'Success' && type === 'Deposit') {
-          const uRef = db.collection('users').doc(userId);
-          const uDoc = await uRef.get();
-          if(uDoc.exists) {
-            let uData = uDoc.data();
-            let curBal = uData.balance || 0;
-            let curDep = uData.deposit || 0;
+      let targetReq = reqs.find(r => r.id === reqId);
+      if(!targetReq) return;
 
-            await uRef.update({
-              balance: curBal + netAmount,
-              deposit: curDep + netAmount
-            });
+      targetReq.status = newStatus;
 
-            if(uData.referredBy && uData.referredBy !== 'NONE') {
-              const inviterSnap = await db.collection('users').where('myReferralCode', '==', uData.referredBy).get();
-              if(!inviterSnap.empty) {
-                let inviterDoc = inviterSnap.docs[0];
-                let inviterData = inviterDoc.data();
-                let commission = netAmount * 0.10;
+      // FIXED: Strictly target the user using exact userId from the request object
+      let targetUser = users.find(u => u.id === userId || u.id === targetReq.userId);
 
-                await db.collection('users').doc(inviterDoc.id).update({
-                  balance: (inviterData.balance || 0) + commission,
-                  teamIncome: (inviterData.teamIncome || 0) + commission
-                });
-
-                await db.collection('requests').add({
-                  userId: inviterDoc.id,
-                  userName: inviterData.name || inviterData.contact,
-                  userContact: inviterData.contact,
-                  type: '10% Team Referral Bonus',
-                  amount: Number(commission),
-                  walletAddress: 'N/A',
-                  status: 'Success',
-                  createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-              }
-            }
-          }
+      // DEPOSIT ACCEPTED -> ADD NET AMOUNT TO USER BALANCE
+      if(newStatus === 'Success' && type === 'Deposit') {
+        let netToAdd = Number(netAmount);
+        if(targetUser) {
+          targetUser.balance = Math.round(((Number(targetUser.balance || 0)) + netToAdd) * 100) / 100;
+          targetUser.deposit = Math.round(((Number(targetUser.deposit || 0)) + netToAdd) * 100) / 100;
+          targetUser.creditedDeposit = Math.round(((Number(targetUser.creditedDeposit || 0)) + netToAdd) * 100) / 100;
         }
+      }
 
-        if(newStatus === 'Rejected' && type === 'Withdrawal') {
-          const uRef = db.collection('users').doc(userId);
-          const uDoc = await uRef.get();
-          if(uDoc.exists) {
-            let curBal = uDoc.data().balance || 0;
-            let refundAmount = grossAmount || netAmount; 
-            await uRef.update({ balance: curBal + refundAmount });
-          }
+      // WITHDRAWAL REJECTED -> REFUND GROSS/REQUESTED AMOUNT BACK TO USER BALANCE
+      if(newStatus === 'Rejected' && type === 'Withdrawal') {
+        let refundAmount = Number(grossAmount || targetReq.grossAmount || targetReq.amount || 0);
+        if(targetUser) {
+          targetUser.balance = Math.round(((Number(targetUser.balance || 0)) + refundAmount) * 100) / 100;
         }
+      }
 
-        alert(`Request marked as ${newStatus} successfully!`);
-      } catch(err) {
-        console.error(err);
-        alert("Action failed!");
+      localStorage.setItem('app_users', JSON.stringify(users));
+      localStorage.setItem('app_requests', JSON.stringify(reqs));
+      
+      loadAdminRequests();
+      loadAdminUsers();
+      alert(`Request marked as ${newStatus}! User balance updated successfully.`);
+    }
+
+    function bulkDeleteSelectedRequests() {
+      const selected = Array.from(document.querySelectorAll('.req-check:checked')).map(cb => cb.value);
+      if(selected.length === 0) { alert("Please select requests to delete!"); return; }
+      if(confirm(`Delete ${selected.length} selected requests?`)) {
+        let reqs = JSON.parse(localStorage.getItem('app_requests') || '[]').filter(r => !selected.includes(r.id));
+        localStorage.setItem('app_requests', JSON.stringify(reqs));
+        loadAdminRequests();
       }
     }
 
     function loadAdminChatList() {
-      db.collection('chats').onSnapshot(snapshot => {
-        let usersMap = {};
-        snapshot.forEach(doc => {
-          let data = doc.data();
-          if(!usersMap[data.userId]) {
-            usersMap[data.userId] = { name: data.userName || data.userContact, unread: 0, docId: doc.id };
-          }
-          if(data.sender === 'User' && (!data.adminRead)) {
-            usersMap[data.userId].unread += 1;
-          }
-        });
+      let chats = JSON.parse(localStorage.getItem('app_chats') || '[]');
+      let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+      let usersMap = {};
 
-        let html = "";
-        Object.keys(usersMap).forEach(uid => {
-          let unreadBadge = usersMap[uid].unread > 0 ? `<span class="unread-dot">${usersMap[uid].unread} Unread</span>` : '';
-          let activeClass = selectedChatUserId === uid ? 'active' : '';
-          html += `<div class="user-chat-item ${activeClass}">
-            <input type="checkbox" class="chat-check" value="${uid}"/>
-            <span onclick="selectUserChat('${uid}', '${usersMap[uid].name}')" style="cursor:pointer; flex:1; margin-left:6px;">💬 ${usersMap[uid].name}</span>
-            ${unreadBadge}
-          </div>`;
-        });
-        document.getElementById('adminUserChatList').innerHTML = html || '<div style="padding:12px; color:var(--text-muted);">No support chats active.</div>';
+      users.forEach(u => {
+        usersMap[u.id] = { name: `${u.name || u.contact} (ID: ${u.myReferralCode || u.id})`, unread: 0 };
       });
+
+      chats.forEach(c => {
+        if(!usersMap[c.userId]) {
+          usersMap[c.userId] = { name: `${c.userName || c.userContact} (ID: ${c.userId})`, unread: 0 };
+        }
+        if(c.sender === 'User' && !c.adminRead) {
+          usersMap[c.userId].unread += 1;
+        }
+      });
+
+      let html = "";
+      Object.keys(usersMap).forEach(uid => {
+        let unreadBadge = usersMap[uid].unread > 0 ? `<span class="unread-dot">${usersMap[uid].unread} Unread</span>` : '';
+        let activeClass = selectedChatUserId === uid ? 'active' : '';
+        html += `<div class="user-chat-item ${activeClass}">
+          <input type="checkbox" class="chat-check" value="${uid}"/>
+          <span onclick="selectUserChat('${uid}', '${usersMap[uid].name}')" style="cursor:pointer; flex:1; margin-left:6px;">💬 ${usersMap[uid].name}</span>
+          ${unreadBadge}
+        </div>`;
+      });
+      document.getElementById('adminUserChatList').innerHTML = html || '<div style="padding:12px; color:var(--text-muted);">No support chats active.</div>';
     }
 
-    async function selectUserChat(uid, contact) {
+    function selectUserChat(uid, contact) {
       selectedChatUserId = uid;
       selectedChatUserContact = contact;
-      document.getElementById('selectedChatTitle').innerText = `Chatting with User: ${contact} (ID: ${uid})`;
-      
-      const unreadSnap = await db.collection('chats').where('userId', '==', uid).where('sender', '==', 'User').where('adminRead', '==', false).get();
-      let batch = db.batch();
-      unreadSnap.forEach(doc => {
-        batch.update(doc.ref, { adminRead: true });
-      });
-      await batch.commit();
+      document.getElementById('selectedChatTitle').innerText = `Chatting with User: ${contact}`;
+
+      let chats = JSON.parse(localStorage.getItem('app_chats') || '[]');
+      chats = chats.map(c => c.userId === uid && c.sender === 'User' ? {...c, adminRead: true} : c);
+      localStorage.setItem('app_chats', JSON.stringify(chats));
 
       loadAdminChatList();
-
-      db.collection('chats').where('userId', '==', uid).onSnapshot(snapshot => {
-        let msgs = [];
-        snapshot.forEach(doc => msgs.push({ id: doc.id, ...doc.data() }));
-        msgs.sort((a,b) => {
-          let tA = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
-          let tB = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-          return tA - tB;
-        });
-
-        let chatHtml = "";
-        msgs.forEach(m => {
-          let side = m.sender === 'Admin' ? 'color:var(--accent-cyan); text-align:right;' : 'color:var(--accent-green);';
-          
-          let fileHtml = "";
-          if(m.fileUrl) {
-            if(m.fileType === 'image') {
-              fileHtml = `<br><a href="${m.fileUrl}" target="_blank"><img src="${m.fileUrl}" class="chat-file-img"/></a>`;
-            } else {
-              fileHtml = `<br><a href="${m.fileUrl}" download="${m.fileName || 'file'}" class="chat-file-link">📄 Download Document (${m.fileName || 'file'})</a>`;
-            }
-          }
-
-          chatHtml += `<div style="${side} margin-bottom:8px;">
-            <b>${m.sender}:</b> ${m.text || ''}${fileHtml}
-            <button class="btn-action" style="background:var(--accent-red); color:#fff; font-size:9px; padding:2px 4px; margin-left:6px;" onclick="deleteChatMessage('${m.id}')">Delete Msg</button>
-          </div>`;
-        });
-        document.getElementById('adminChatMsgs').innerHTML = chatHtml;
-      });
+      renderAdminChatMsgs();
     }
 
-    async function deleteChatMessage(msgId) {
+    function renderAdminChatMsgs() {
+      if(!selectedChatUserId) return;
+      let chats = JSON.parse(localStorage.getItem('app_chats') || '[]').filter(c => c.userId === selectedChatUserId);
+      chats.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+      let chatHtml = "";
+      chats.forEach(m => {
+        let side = m.sender === 'Admin' ? 'color:var(--accent-cyan); text-align:right;' : 'color:var(--accent-green);';
+        let fileHtml = "";
+        if(m.fileUrl) {
+          if(m.fileType === 'image') {
+            fileHtml = `<br><a href="${m.fileUrl}" target="_blank"><img src="${m.fileUrl}" class="chat-file-img"/></a>`;
+          } else {
+            fileHtml = `<br><a href="${m.fileUrl}" download="${m.fileName || 'file'}" class="chat-file-link">📄 Download Document (${m.fileName || 'file'})</a>`;
+          }
+        }
+        chatHtml += `<div style="${side} margin-bottom:8px;">
+          <b>${m.sender}:</b> ${m.text || ''}${fileHtml}
+          <button class="btn-action" style="background:var(--accent-red); color:#fff; font-size:9px; padding:2px 4px; margin-left:6px;" onclick="deleteChatMessage('${m.id}')">Delete Msg</button>
+        </div>`;
+      });
+      document.getElementById('adminChatMsgs').innerHTML = chatHtml;
+    }
+
+    function deleteChatMessage(msgId) {
       if(confirm("Delete this message?")) {
-        await db.collection('chats').doc(msgId).delete();
+        let chats = JSON.parse(localStorage.getItem('app_chats') || '[]').filter(c => c.id !== msgId);
+        localStorage.setItem('app_chats', JSON.stringify(chats));
+        renderAdminChatMsgs();
       }
     }
 
-    async function sendAdminReply(fileData = null) {
+    function bulkDeleteSelectedChats() {
+      const selected = Array.from(document.querySelectorAll('.chat-check:checked')).map(cb => cb.value);
+      if(selected.length === 0) { alert("Select chats to delete!"); return; }
+      if(confirm(`Delete chats for ${selected.length} selected users?`)) {
+        let chats = JSON.parse(localStorage.getItem('app_chats') || '[]').filter(c => !selected.includes(c.userId));
+        localStorage.setItem('app_chats', JSON.stringify(chats));
+        loadAdminChatList();
+        document.getElementById('adminChatMsgs').innerHTML = "";
+      }
+    }
+
+    function sendAdminReply(fileData = null) {
       const txt = document.getElementById('adminReplyInput').value.trim();
       if(!txt && !fileData) return;
       if(!selectedChatUserId) return;
 
+      let chats = JSON.parse(localStorage.getItem('app_chats') || '[]');
       let chatObj = {
+        id: 'chat_' + Date.now(),
         userId: selectedChatUserId,
         userContact: selectedChatUserContact,
         sender: 'Admin',
         text: txt || '',
         adminRead: true,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: new Date().toISOString()
       };
-
-      if(fileData) {
-        chatObj.fileUrl = fileData.url;
-        chatObj.fileName = fileData.name;
-        chatObj.fileType = fileData.type;
-      }
-
-      await db.collection('chats').add(chatObj);
+      chats.push(chatObj);
+      localStorage.setItem('app_chats', JSON.stringify(chats));
       document.getElementById('adminReplyInput').value = '';
+      renderAdminChatMsgs();
+      loadAdminChatList();
     }
 
     function handleAdminFileUpload(e) {
       const file = e.target.files[0];
       if(!file) return;
-
       const reader = new FileReader();
       reader.onload = function(evt) {
-        const base64Url = evt.target.result;
-        sendAdminReply({
-          url: base64Url,
-          name: file.name,
-          type: file.type.includes('image') ? 'image' : 'document'
-        });
+        sendAdminReply({ url: evt.target.result, name: file.name, type: file.type.includes('image') ? 'image' : 'document' });
         alert("File sent to user!");
       };
       reader.readAsDataURL(file);
-    }
-
-    function listenToAdminCommunityStream() {
-      db.collection('community_chats').onSnapshot(snapshot => {
-        let msgs = [];
-        snapshot.forEach(doc => msgs.push(doc.data()));
-        msgs.sort((a,b) => {
-          let tA = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
-          let tB = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-          return tB - tA;
-        });
-
-        let html = "";
-        msgs.forEach(m => {
-          let dateStr = m.createdAt && m.createdAt.seconds ? new Date(m.createdAt.seconds * 1000).toLocaleTimeString() : '';
-          html += `<div style="margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:2px;">
-            <b style="color:var(--accent-green);">${m.userName}:</b> ${m.text} <span style="font-size:9px; color:var(--text-muted); float:right;">${dateStr}</span>
-          </div>`;
-        });
-        const box = document.getElementById('adminCommunityStream');
-        if(box) box.innerHTML = html || '<div style="color:var(--text-muted);">No community activity.</div>';
-      });
     }
 
     function handleAnnounceImg(e) {
@@ -521,15 +534,18 @@
       }
     }
 
-    async function publishAnnouncement() {
+    function publishAnnouncement() {
       const text = document.getElementById('announceText').value.trim();
       if(!text && !announcementImgBase64) { alert("Please enter text or select an image!"); return; }
 
-      await db.collection('announcements').add({
+      let items = JSON.parse(localStorage.getItem('app_announcements') || '[]');
+      items.push({
+        id: 'ann_' + Date.now(),
         text: text,
         imageUrl: announcementImgBase64 || null,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: new Date().toISOString()
       });
+      localStorage.setItem('app_announcements', JSON.stringify(items));
 
       document.getElementById('announceText').value = '';
       announcementImgBase64 = null;
@@ -547,23 +563,25 @@
       }
     }
 
-    async function saveGuideVideoUrl() {
+    function saveGuideVideoUrl() {
       const url = document.getElementById('guideVideoUrlInput').value.trim();
       if(!url) { alert("Please provide video URL or file!"); return; }
 
-      await db.collection('app_settings').doc('user_guide').set({
-        videoUrl: url,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
+      localStorage.setItem('app_guide', JSON.stringify({ videoUrl: url, updatedAt: new Date().toISOString() }));
       alert("User Guide Video updated successfully for all users!");
     }
+
+    setInterval(() => {
+      loadAdminUsers();
+      loadAdminRequests();
+      loadAdminChatList();
+      if(selectedChatUserId) renderAdminChatMsgs();
+    }, 1500);
 
     window.onload = function() {
       loadAdminUsers();
       loadAdminRequests();
       loadAdminChatList();
-      listenToAdminCommunityStream();
     };
   </script>
 </body>
