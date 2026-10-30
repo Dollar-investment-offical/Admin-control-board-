@@ -201,6 +201,10 @@
         let withdrawals = userReqs.filter(r => r.type === 'Withdrawal' && r.status === 'Success');
         let totalWdAmt = withdrawals.reduce((sum, r) => sum + Number(r.grossAmount || r.amount || 0), 0);
 
+        let teamMembers = allusers.filter(x => x.referredBy === u.myReferralCode || x.referredBy === u.id);
+        let teamSize = teamMembers.length;
+        let teamTotalDeposit = teamMembers.reduce((sum, x) => sum + Number(x.creditedDeposit || x.deposit || 0), 0);
+
         let blockStatusBtn = u.isBlocked ? 
           `<button class="btn-action" style="background:var(--accent-red); color:#fff;" onclick="toggleBlockUser('${u.id}', false)">Unblock</button>` : 
           `<button class="btn-action" onclick="toggleBlockUser('${u.id}', true)">Block</button>`;
@@ -220,7 +224,7 @@
           </td>
           <td><b>Total:</b> $${totalDepAmt.toFixed(2)} (${deposits.length} times)</td>
           <td><b>Total:</b> $${totalWdAmt.toFixed(2)} (${withdrawals.length} times)</td>
-          <td><b>Team Size:</b> 0<br><b>Team Asset:</b> $0.00<br><b>Today Profit:</b> $${Number(u.todayOrderProfit || 0).toFixed(2)}</td>
+          <td><b>Team Size:</b> ${teamSize}<br><b>Team Asset:</b> $${teamTotalDeposit.toFixed(2)}<br><b>Ref Income:</b> $${Number(u.teamIncome || 0).toFixed(2)}</td>
           <td>
             <button class="btn-action" style="background:var(--accent-purple); color:#fff; font-size:16px; padding:6px 10px;" onclick="openDigitalModal('${u.id}')" title="View Digital Record">💠</button>
           </td>
@@ -238,16 +242,21 @@
       let u = users.find(x => x.id === userId);
       if(!u) return;
 
+      let teamMembers = users.filter(x => x.referredBy === u.myReferralCode || x.referredBy === u.id);
+      let teamSize = teamMembers.length;
+      let teamTotalDeposit = teamMembers.reduce((sum, x) => sum + Number(x.creditedDeposit || x.deposit || 0), 0);
+
       let regDate = u.createdAt ? new Date(u.createdAt).toLocaleString() : 'N/A';
       let html = `
         <div class="digital-row"><span>New Joiner ID:</span> <span class="digital-val">${u.myReferralCode || u.id}</span></div>
         <div class="digital-row"><span>Email / Number:</span> <span class="digital-val">${u.contact || 'N/A'}</span></div>
+        <div class="digital-row"><span>Referred By:</span> <span class="digital-val">${u.referredBy || 'Direct'}</span></div>
         <div class="digital-row"><span>Date & Time Joined:</span> <span class="digital-val">${regDate}</span></div>
-        <div class="digital-row"><span>Team Size:</span> <span class="digital-val">0 Members</span></div>
-        <div class="digital-row"><span>Team Assets:</span> <span class="digital-val">$0.00 USDT</span></div>
+        <div class="digital-row"><span>Team Size:</span> <span class="digital-val">${teamSize} Members</span></div>
+        <div class="digital-row"><span>Team Assets:</span> <span class="digital-val">$${teamTotalDeposit.toFixed(2)} USDT</span></div>
         <div class="digital-row"><span>User Assets (Total Balance):</span> <span class="digital-val">$${Number(u.balance || 0).toFixed(2)} USDT</span></div>
+        <div class="digital-row"><span>Referral Bonus Earned:</span> <span class="digital-val">$${Number(u.teamIncome || 0).toFixed(2)} USDT</span></div>
         <div class="digital-row"><span>User Daily Profit:</span> <span class="digital-val">$${Number(u.todayOrderProfit || 0).toFixed(2)} USDT</span></div>
-        <div class="digital-row"><span>Team Daily Profit:</span> <span class="digital-val">$0.00 USDT</span></div>
         
         <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
           <h4 style="font-size:14px; color:var(--accent-cyan); margin-bottom:8px;">🛠️ Manual Asset Add / Manage Button</h4>
@@ -366,16 +375,40 @@
 
       targetReq.status = newStatus;
 
-      // Ensure exact targeting by ID
       let targetUser = users.find(u => u.id === userId || u.id === targetReq.userId);
 
-      // DEPOSIT ACCEPTED -> ADD NET AMOUNT TO USER BALANCE
+      // DEPOSIT ACCEPTED -> CREDIT NET AMOUNT & GIVE 10% REFERRAL BONUS TO REFERRER
       if(newStatus === 'Success' && type === 'Deposit') {
         let netToAdd = Number(netAmount);
+        let grossDep = Number(grossAmount || targetReq.grossAmount || netAmount);
+
         if(targetUser) {
           targetUser.balance = Math.round(((Number(targetUser.balance || 0)) + netToAdd) * 100) / 100;
           targetUser.deposit = Math.round(((Number(targetUser.deposit || 0)) + netToAdd) * 100) / 100;
           targetUser.creditedDeposit = Math.round(((Number(targetUser.creditedDeposit || 0)) + netToAdd) * 100) / 100;
+
+          // Process 10% Referral Bonus to Referrer
+          if (targetUser.referredBy && targetUser.referredBy !== 'NONE') {
+            let referrer = users.find(u => u.myReferralCode === targetUser.referredBy || u.id === targetUser.referredBy);
+            if (referrer) {
+              let bonusAmt = Math.round((grossDep * 0.10) * 100) / 100;
+              referrer.balance = Math.round(((Number(referrer.balance || 0)) + bonusAmt) * 100) / 100;
+              referrer.teamIncome = Math.round(((Number(referrer.teamIncome || 0)) + bonusAmt) * 100) / 100;
+
+              // Record in Referrer's Activity History
+              reqs.push({
+                id: 'req_ref_' + Date.now(),
+                userId: referrer.id,
+                userName: referrer.name || referrer.contact,
+                userContact: referrer.contact,
+                type: `10% Referral Bonus (${targetUser.name || targetUser.contact})`,
+                grossAmount: bonusAmt,
+                amount: bonusAmt,
+                status: 'Success',
+                createdAt: new Date().toISOString()
+              });
+            }
+          }
         }
       }
 
@@ -392,7 +425,7 @@
       
       loadAdminRequests();
       loadAdminUsers();
-      alert(`Request marked as ${newStatus}! User balance updated successfully.`);
+      alert(`Request marked as ${newStatus}! User balance and referral bonus updated successfully.`);
     }
 
     function bulkDeleteSelectedRequests() {
