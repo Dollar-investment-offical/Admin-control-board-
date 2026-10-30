@@ -180,65 +180,6 @@
   </div>
 
   <script>
-
-    /* DEMO CLOUD SYNC BRIDGE — Firebase Realtime Database REST */
-    (function () {
-      const DB_ROOT = 'https://dollar-investment-28635-default-rtdb.firebaseio.com/dollarInvestmentDemo';
-      const SHARED_KEYS = ['app_users','app_requests','app_chats','app_community','app_announcements','app_guide'];
-      const nativeGet = Storage.prototype.getItem;
-      const nativeSet = Storage.prototype.setItem;
-      const nativeRemove = Storage.prototype.removeItem;
-      const lastWrite = Object.create(null);
-      const urlFor = key => DB_ROOT + '/' + encodeURIComponent(key) + '.json';
-      // Hydrate shared demo data before the app's main script reads localStorage.
-      try {
-        for (const key of SHARED_KEYS) {
-          const xhr = new XMLHttpRequest();
-          xhr.open('GET', urlFor(key), false);
-          xhr.send(null);
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const remote = JSON.parse(xhr.responseText || 'null');
-            if (remote !== null) nativeSet.call(localStorage, key, typeof remote === 'string' ? remote : JSON.stringify(remote));
-            else if (nativeGet.call(localStorage, key) !== null) {
-              const seed = nativeGet.call(localStorage, key);
-              fetch(urlFor(key), { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(seed) }).catch(()=>{});
-            }
-          } else {
-            console.warn('Cloud sync read failed for', key, xhr.status);
-          }
-        }
-      } catch (e) { console.warn('Cloud sync is not ready. Check Realtime Database rules.', e); }
-      Storage.prototype.setItem = function (key, value) {
-        nativeSet.call(this, key, value);
-        if (this === localStorage && SHARED_KEYS.includes(String(key))) {
-          lastWrite[key] = Date.now();
-          fetch(urlFor(key), { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(String(value)) })
-            .catch(err => console.warn('Cloud sync write failed:', key, err));
-        }
-      };
-      Storage.prototype.removeItem = function (key) {
-        nativeRemove.call(this, key);
-        if (this === localStorage && SHARED_KEYS.includes(String(key))) {
-          lastWrite[key] = Date.now();
-          fetch(urlFor(key), { method: 'DELETE' }).catch(err => console.warn('Cloud sync delete failed:', key, err));
-        }
-      };
-      // Refresh shared data so the app and admin board see activity from other devices.
-      setInterval(async () => {
-        for (const key of SHARED_KEYS) {
-          if (Date.now() - (lastWrite[key] || 0) < 2500) continue;
-          try {
-            const response = await fetch(urlFor(key), { cache: 'no-store' });
-            if (!response.ok) continue;
-            const remote = await response.json();
-            if (remote === null || remote === undefined) continue;
-            const remoteText = typeof remote === 'string' ? remote : JSON.stringify(remote);
-            if (nativeGet.call(localStorage, key) !== remoteText) nativeSet.call(localStorage, key, remoteText);
-          } catch (e) { /* retry on next refresh */ }
-        }
-      }, 3000);
-      window.DollarDemoCloud = { databaseUrl: DB_ROOT, sharedKeys: SHARED_KEYS };
-    })();
     let selectedChatUserId = null;
     let selectedChatUserContact = null;
     let announcementImgBase64 = null;
@@ -431,10 +372,6 @@
 
       let targetReq = reqs.find(r => r.id === reqId);
       if(!targetReq) return;
-      if (targetReq.status === 'Success' && newStatus === 'Success') {
-        alert('This request has already been approved. No duplicate credit was made.');
-        return;
-      }
 
       targetReq.status = newStatus;
 
@@ -643,7 +580,7 @@
       });
       localStorage.setItem('app_announcements', JSON.stringify(items));
 
-      document.getElementById('announceText').value = './';
+      document.getElementById('announceText').value = '';
       announcementImgBase64 = null;
       alert("Announcement published successfully to all users!");
     }
@@ -680,8 +617,5 @@
       loadAdminChatList();
     };
   </script>
-
-  <div id="demo-cloud-notice" style="position:fixed;bottom:8px;left:8px;right:8px;z-index:99999;background:#332600;color:#ffe7a3;border:1px solid #9a741d;border-radius:8px;padding:8px 10px;font:12px/1.4 Arial,sans-serif;text-align:center;box-shadow:0 2px 12px #0008;">DEMO ONLY — Cloud sync uses public demo database rules. Do not enter real passwords, identity documents, or real-money deposit details.</div>
-
 </body>
 </html>
